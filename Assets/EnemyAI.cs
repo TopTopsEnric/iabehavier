@@ -6,7 +6,8 @@ public class EnemyAI : MonoBehaviour
     public Transform[] waypoints; // Puntos de patrulla
     private NavMeshAgent agente;
     private int indiceDestino = 0;
-    private Transform jugador; // Referencia al jugador
+    private int direccion = 1; // 1 para avanzar, -1 para retroceder
+    private Transform jugador;
     private bool persiguiendo = false;
 
     private float vidaJugador = 100f; // Vida del jugador (debe actualizarse desde el Player)
@@ -29,18 +30,17 @@ public class EnemyAI : MonoBehaviour
                 SiguientePunto();
             }
         }
-        else if (jugador != null) // Si está persiguiendo o huyendo
+        else if (jugador != null)
         {
             float distancia = Vector3.Distance(transform.position, jugador.position);
-
-            if (vidaJugador > 50f) // Si la vida del jugador está por encima de la mitad, lo persigue
+            if (vidaJugador > 50f)
             {
                 agente.SetDestination(jugador.position);
             }
-            else // Si la vida del jugador está a la mitad o menos, huye
+            else
             {
                 Vector3 direccionHuir = (transform.position - jugador.position).normalized;
-                Vector3 destinoHuir = transform.position + direccionHuir * 10f; // Se mueve 10 unidades en dirección opuesta
+                Vector3 destinoHuir = transform.position + direccionHuir * 10f;
                 agente.SetDestination(destinoHuir);
             }
         }
@@ -50,7 +50,21 @@ public class EnemyAI : MonoBehaviour
     {
         if (waypoints.Length == 0) return;
 
-        indiceDestino = (indiceDestino + 1) % waypoints.Length; // Cambia al siguiente waypoint
+        // Cambia de waypoint en la dirección actual
+        indiceDestino += direccion;
+
+        // Si llega al final o al principio, invierte la dirección de manera segura
+        if (indiceDestino >= waypoints.Length)
+        {
+            indiceDestino = waypoints.Length - 1;
+            direccion = -1;
+        }
+        else if (indiceDestino < 0)
+        {
+            indiceDestino = 0;
+            direccion = 1;
+        }
+
         agente.SetDestination(waypoints[indiceDestino].position);
     }
 
@@ -69,7 +83,7 @@ public class EnemyAI : MonoBehaviour
         {
             persiguiendo = false;
             jugador = null;
-            SiguientePunto(); // Vuelve a patrullar si el jugador se va
+            SiguientePunto();
         }
     }
 }
