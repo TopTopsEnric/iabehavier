@@ -3,87 +3,90 @@ using UnityEngine.AI;
 
 public class EnemyAI : MonoBehaviour
 {
-    public Transform[] waypoints; // Puntos de patrulla
-    private NavMeshAgent agente;
-    private int indiceDestino = 0;
-    private int direccion = 1; // 1 para avanzar, -1 para retroceder
-    private Transform jugador;
-    private bool persiguiendo = false;
+    // Estados
+    public State currentState;
+    public EnemyPatrolState patrolState;
+    public EnemyChaseState chaseState;
+    public EnemyFleeState fleeState;
+    public EnemyWaitState waitState;
 
-    private float vidaJugador = 100f; // Vida del jugador (debe actualizarse desde el Player)
+    // Referencias a otros objetos importantes
+    public Transform player;  // El jugador
+    public Transform[] patrolPoints;  // Puntos de patrullaje
+    public int health = 100;  // Salud del enemigo
+    public float fleeSpeed = 5f;  // Velocidad de huida del enemigo
+    private bool playerInTrigger = false;
 
-    void Start()
+    // Referencia al NavMeshAgent
+    private NavMeshAgent agent;
+
+    private void Start()
     {
-        agente = GetComponent<NavMeshAgent>();
-        if (waypoints.Length > 0)
-        {
-            agente.SetDestination(waypoints[indiceDestino].position);
-        }
+        // Inicializa los estados
+        patrolState = new EnemyPatrolState();
+        chaseState = new EnemyChaseState();
+        fleeState = new EnemyFleeState();
+        waitState = new EnemyWaitState();
+
+        // Obtener el NavMeshAgent
+        agent = GetComponent<NavMeshAgent>();
+
+        // El estado inicial es patrullaje
+        SwitchState(patrolState);
     }
 
-    void Update()
+    private void Update()
     {
-        if (!persiguiendo) // Si no está persiguiendo, patrulla
-        {
-            if (!agente.pathPending && agente.remainingDistance < 0.5f)
-            {
-                SiguientePunto();
-            }
-        }
-        else if (jugador != null)
-        {
-            float distancia = Vector3.Distance(transform.position, jugador.position);
-            if (vidaJugador > 50f)
-            {
-                agente.SetDestination(jugador.position);
-            }
-            else
-            {
-                Vector3 direccionHuir = (transform.position - jugador.position).normalized;
-                Vector3 destinoHuir = transform.position + direccionHuir * 10f;
-                agente.SetDestination(destinoHuir);
-            }
-        }
+        // Actualiza el estado actual
+        currentState.UpdateState(this);
+
+        Debug.Log(currentState);
     }
 
-    void SiguientePunto()
+    // Cambiar de estado
+    public void SwitchState(State newState)
     {
-        if (waypoints.Length == 0) return;
-
-        // Cambia de waypoint en la dirección actual
-        indiceDestino += direccion;
-
-        // Si llega al final o al principio, invierte la dirección de manera segura
-        if (indiceDestino >= waypoints.Length)
-        {
-            indiceDestino = waypoints.Length - 1;
-            direccion = -1;
-        }
-        else if (indiceDestino < 0)
-        {
-            indiceDestino = 0;
-            direccion = 1;
-        }
-
-        agente.SetDestination(waypoints[indiceDestino].position);
+        currentState = newState;
+        currentState.EnterState(this);
     }
 
-    private void OnTriggerEnter(Collider other)
+    // Mueve al enemigo hacia un objetivo usando NavMeshAgent
+    public void MoveTowards(Vector3 targetPos)
+    {
+        // Utiliza el NavMeshAgent para moverse hacia el objetivo
+        agent.SetDestination(targetPos);
+    }
+
+    // Detectar si el enemigo ve al jugador (puedes expandir esta función con Raycast o visión con campo de visión)
+    public bool CanSeePlayer()
+    {
+        return playerInTrigger;
+    }
+
+    // Comprobar si el enemigo está cerca de otros enemigos para evitar colisiones
+    public bool IsNearOtherEnemies()
+    {
+        // Comprobar si el enemigo está cerca de otros enemigos (esto depende de tu implementación de enemigos)
+        Collider[] hitColliders = Physics.OverlapSphere(transform.position, 2f);
+        foreach (var hitCollider in hitColliders)
+        {
+            if (hitCollider.CompareTag("Enemy") && hitCollider != this.GetComponent<Collider>())
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void OnTriggerStay(Collider other)
     {
         if (other.CompareTag("Player"))
         {
-            jugador = other.transform;
-            persiguiendo = true;
+            playerInTrigger = true;
         }
-    }
-
-    private void OnTriggerExit(Collider other)
-    {
-        if (other.CompareTag("Player"))
+        else
         {
-            persiguiendo = false;
-            jugador = null;
-            SiguientePunto();
+            playerInTrigger = false;
         }
     }
 }
