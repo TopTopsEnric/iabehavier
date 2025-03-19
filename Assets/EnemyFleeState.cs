@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+
+[CreateAssetMenu(fileName = "EnemyFleeState", menuName = "States/flee")]
 public class EnemyFleeState : State
 {
     public override void EnterState(EnemyAI enemy)
@@ -17,10 +19,10 @@ public class EnemyFleeState : State
         // Mueve al enemigo hacia la posición opuesta al jugador
         enemy.MoveTowards(fleePosition);
 
-        // Si la salud del enemigo es mayor o igual al 50%, cambia a persecución
-        if (enemy.health >= 50)
-        {
-            enemy.SwitchState(enemy.chaseState);
-        }
+
+    }
+    public override void ExitState(EnemyAI enemy)
+    {
+
     }
 }
